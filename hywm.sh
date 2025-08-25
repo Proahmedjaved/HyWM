@@ -32,7 +32,7 @@ print_usage() {
     echo -e ""
     echo -e "${C_YELLOW}Commands:${C_NC}"
     echo -e "  ${C_BOLD}setup  [name]${C_NC}  - Create a new or overwrite an existing session."
-    echo -e "  ${C_BOLD}launch [name]${C_NC}  - Launch the apps for a specific session in parallel."
+    echo -e "  ${C_BOLD}launch [name]${C_NC}  - Launch the apps for a specific session."
     echo -e "  ${C_BOLD}list${C_NC}           - List all available sessions."
     echo -e "  ${C_BOLD}delete [name]${C_NC}  - Delete a specific session."
 }
@@ -101,26 +101,14 @@ launch_session() {
     local config_file="$CONFIG_DIR/$session_name.conf"
     if [[ ! -f "$config_file" ]]; then echo -e "${C_RED}Error: Session '${C_BOLD}$session_name${C_NC}${C_RED}' not found!${C_NC}"; exit 1; fi
 
-    # This function takes a single line (e.g., "1:kitty") and executes the launch command.
-    launch_line_job() {
-        local line="$1"
-        local workspace="${line%%:*}"
-        local app_command="${line#*:}"
-        
-        C_BOLD='\033[1m'
-        C_NC='\033[0m'
-
-        echo -e "  -> Dispatching ${C_BOLD}$app_command${C_NC} to workspace ${C_BOLD}$workspace${C_NC}..."
-        hyprctl dispatch workspace "$workspace"
-        sleep 1
-        bash -c "$app_command &"
-    }
-    export -f launch_line_job
-
-    print_header
-    echo -e "${C_BLUE}Launching session '${C_BOLD}$session_name${C_NC}${C_BLUE}' in parallel...${C_NC}"
-
-    <"$config_file" sed '/^$/d' | parallel --no-notice -j 0 launch_line_job {}
+    while IFS=: read -r workspace app_command; do
+        if [[ -n "$workspace" && -n "$app_command" ]]; then
+            echo -e "  -> Dispatching ${C_BOLD}$app_command${C_NC} to workspace ${C_BOLD}$workspace${C_NC}..."
+            hyprctl dispatch workspace "$workspace"
+            sleep 1
+            bash -c "$app_command &"
+        fi
+    done < <(sed '/^$/d' "$config_file")
 
     echo -e "\n${C_GREEN}All launch commands for session '${C_BOLD}$session_name${C_NC}${C_GREEN}' have been dispatched.${C_NC}"
 }
