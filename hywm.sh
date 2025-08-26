@@ -104,9 +104,10 @@ launch_session() {
     while IFS=: read -r workspace app_command; do
         if [[ -n "$workspace" && -n "$app_command" ]]; then
             echo -e "  -> Dispatching ${C_BOLD}$app_command${C_NC} to workspace ${C_BOLD}$workspace${C_NC}..."
-            hyprctl dispatch workspace "$workspace"
-            sleep 1
-            bash -c "$app_command &"
+            hyprctl dispatch exec "[workspace $workspace silent] $app_command"
+            # hyprctl dispatch workspace "$workspace"
+            # bash -c "$app_command &"
+            # sleep 2
         fi
     done < <(sed '/^$/d' "$config_file")
 
